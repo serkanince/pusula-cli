@@ -1,5 +1,12 @@
 # 🧭 Pusula CLI
+
+<div align="center">
+  <img src="logo.png" width="512">
+</div>
+
 High-performance Skyscanner API wrapper for Bun. Optimized with stealth-mode polling and strict flight filtering for terminal enthusiasts.
+
+
 
 ## 🚀 Setup
 
