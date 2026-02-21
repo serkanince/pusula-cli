@@ -11,13 +11,16 @@ High-performance Skyscanner API wrapper for Bun. Optimized with stealth-mode pol
 ## 🚀 Setup
 
 ```bash
-# 1. Export cookies from Skyscanner
+# 1. Install dependencies
+bun install
+
+# 2. Export cookies from Skyscanner
 # Visit https://www.skyscanner.com.tr in Chrome
 # Option A: Install "Get cookies.txt LOCALLY" extension (Netscape format)
 # Option B: Install "EditThisCookie" (JSON format) - Recommended
 # Save as cookies.txt
 
-# 2. Run directly
+# 3. Run directly
 bun run pusula.ts
 ```
 
