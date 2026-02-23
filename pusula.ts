@@ -112,9 +112,11 @@ export class SkyscannerAPI {
     this.viewId = generateUUID();
     this.deviceGuid = this.cookies['device_guid'] || generateUUID();
     this.maxStops = options.maxStops ?? (options.directOnly ? 0 : 99);
+    this.checkCookieExpiry();
   }
 
   private maxStops: number = 99;
+  private cookieExpiry: Record<string, number> = {};  // name → Unix timestamp (0 = no expiry)
 
   private loadCookies(cookieFile: string): Record<string, string> {
     try {
@@ -132,10 +134,13 @@ export class SkyscannerAPI {
           cookieArray.forEach((c: any) => {
             if (c.name && c.value) {
               cookies[c.name] = c.value;
+              if (c.expirationDate) {
+                this.cookieExpiry[c.name] = Math.floor(c.expirationDate);
+              }
             }
           });
 
-          console.log(`✅ ${Object.keys(cookies).length} cookies loaded from JSON`);
+          process.stderr.write(`\u2705 ${Object.keys(cookies).length} cookies JSON'dan y\u00fcklendi\n`);
           return cookies;
         } catch (e) {
           // If JSON parse fails, maybe it's actually Netscape format even if it looks like JSON
@@ -143,19 +148,65 @@ export class SkyscannerAPI {
       }
 
       // Handle Netscape format (tab-separated)
+      // Columns: domain, flag, path, secure, expiry(unix), name, value
       content.split('\n').forEach((line: string) => {
         if (line.startsWith('#') || !line.trim()) return;
         const parts = line.split('\t');
         if (parts.length >= 7) {
-          cookies[parts[5]] = parts[6];
+          const name = parts[5];
+          const value = parts[6];
+          const expiry = parseInt(parts[4], 10);
+          cookies[name] = value;
+          if (!isNaN(expiry) && expiry > 0) {
+            this.cookieExpiry[name] = expiry;
+          }
         }
       });
 
-      console.log(`✅ ${Object.keys(cookies).length} cookies loaded from Netscape format`);
+      process.stderr.write(`\u2705 ${Object.keys(cookies).length} cookies Netscape format\u0131ndan y\u00fcklendi\n`);
       return cookies;
     } catch (error) {
-      console.log('⚠️  No cookies found or error reading file');
+      process.stderr.write('\u26a0\ufe0f  Cookie dosyas\u0131 bulunamad\u0131 veya okunamad\u0131\n');
       return {};
+    }
+  }
+
+  private checkCookieExpiry(): void {
+    const now = Math.floor(Date.now() / 1000);
+    const warnDays = 7;
+    const warnSecs = warnDays * 86400;
+
+    const expired: string[] = [];
+    const expiringSoon: string[] = [];
+
+    for (const [name, expiry] of Object.entries(this.cookieExpiry)) {
+      if (expiry === 0) continue;  // session cookie, no explicit expiry
+      if (expiry < now) {
+        expired.push(name);
+      } else if (expiry - now < warnSecs) {
+        const daysLeft = Math.floor((expiry - now) / 86400);
+        expiringSoon.push(`${name} (${daysLeft} g\u00fcn)`);
+      }
+    }
+
+    if (expired.length > 0) {
+      process.stderr.write(
+        `\n\u274c COOKIE S\u00dcRES\u0130 DOLDU — Scrape i\u015flemleri durabilir!\n` +
+        `   S\u00fcresi dolan cookie'ler: ${expired.join(', ')}\n` +
+        `   → Skyscanner'dan cookies.txt'i yeniden export edin.\n\n`
+      );
+    }
+
+    if (expiringSoon.length > 0) {
+      process.stderr.write(
+        `\u26a0\ufe0f  COOKIE UYARISI — Baz\u0131 cookie'ler yak\u0131nda dolacak:\n` +
+        `   ${expiringSoon.join(', ')}\n` +
+        `   → Yakl\u0131\u015fan s\u00fcre dolmadan cookies.txt'i yenileyin.\n\n`
+      );
+    }
+
+    if (expired.length === 0 && expiringSoon.length === 0 && Object.keys(this.cookieExpiry).length > 0) {
+      process.stderr.write('\u2705 T\u00fcm cookie\'ler ge\u00e7erli\n');
     }
   }
 
@@ -235,10 +286,9 @@ export class SkyscannerAPI {
       throw new Error('origin, destination, and outboundDate are required');
     }
 
-    console.log('\n🔍 Searching flights...');
-    console.log(`   ${origin} → ${destination}`);
-    console.log(`   Departure: ${outboundDate}${inboundDate ? `, Return: ${inboundDate}` : ' (one-way)'}`);
-    console.log(`   ${adults} passenger(s), ${cabinClass}\n`);
+    process.stderr.write(`\n🔍 Uçuş aranıyor: ${origin} → ${destination}\n`);
+    process.stderr.write(`   Gidiş: ${outboundDate}${inboundDate ? `, Dönüş: ${inboundDate}` : ' (tek yön)'}\n`);
+    process.stderr.write(`   ${adults} yolcu, ${cabinClass}\n\n`);
 
     const outbound = parseDate(outboundDate);
     const inbound = inboundDate ? parseDate(inboundDate) : null;
@@ -266,7 +316,7 @@ export class SkyscannerAPI {
     }
 
     this.maxStops = maxStops;
-    console.log('📡 Sending request...');
+    process.stderr.write('📡 İstek gönderiliyor...\n');
     const searchResponse = await this.makeRequest('POST', '/g/radar/api/v2/web-unified-search/', requestBody);
 
     const sessionId = searchResponse.context?.sessionId;
@@ -274,12 +324,12 @@ export class SkyscannerAPI {
       throw new Error('No session ID received');
     }
 
-    console.log(`✅ Session: ${sessionId.substring(0, 30)}...\n`);
+    process.stderr.write(`✅ Session: ${sessionId.substring(0, 30)}...\n\n`);
     return await this.pollResults(sessionId);
   }
 
   private async pollResults(sessionId: string): Promise<SearchResults> {
-    console.log('⏳ Waiting for all results...\n');
+    process.stderr.write('⏳ Sonuçlar bekleniyor...\n\n');
 
     let attempts = 0;
     const maxAttempts = 30;
@@ -287,24 +337,23 @@ export class SkyscannerAPI {
     while (attempts < maxAttempts) {
       attempts++;
 
-      const delay = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
-      console.log(`\n⏳ Wait #${attempts}: Sleeping for ${Math.round(delay / 1000)}s before polling...`);
-      await sleep(delay);
-
       const response = await this.makeRequest('GET', `/g/radar/api/v2/web-unified-search/${sessionId}`);
 
       const status = response.context?.status;
       const results = response.itineraries?.results || [];
 
-      console.log(`   Poll #${attempts}: ${status} - ${results.length} flights`);
+      process.stderr.write(`   Poll #${attempts}: ${status} - ${results.length} uçuş\n`);
 
       if (status === 'complete') {
-        console.log('\n✅ All results ready!\n');
+        process.stderr.write('\n✅ Tüm sonuçlar hazır!\n\n');
         return this.parseResults(response);
       }
+
+      // complete değilse kısa bekle ve tekrar dene
+      await sleep(2000);
     }
 
-    console.log('\n⚠️  Timeout, returning partial results\n');
+    process.stderr.write('\n⚠️  Zaman aşımı, kısmi sonuçlar döndürülüyor\n\n');
     const finalResponse = await this.makeRequest('GET', `/g/radar/api/v2/web-unified-search/${sessionId}`);
     return this.parseResults(finalResponse);
   }
@@ -356,26 +405,40 @@ export class SkyscannerAPI {
 }
 
 // ============================================================================
-// EXAMPLE USAGE (if run directly)
+// CLI ENTRYPOINT
 // ============================================================================
 
 if (import.meta.main) {
-  const api = new SkyscannerAPI();
+  // Args: origin destination outboundDate [inboundDate] [adults] [maxStops]
+  // Example: bun run pusula.ts ESB BCN 2026-04-10 - 1 0
+  const args = process.argv.slice(2);
 
-  const results = await api.searchFlights({
-    origin: 'ESB',
-    destination: 'BCN',
-    outboundDate: '2026-03-25',
-    adults: 1,
-    maxStops: 0,
-  });
+  const origin = args[0] || 'ESB';
+  const destination = args[1] || 'BCN';
+  const outboundDate = args[2] || '2026-04-10';
+  const inboundDate = args[3] && args[3] !== '-' ? args[3] : undefined;
+  const adults = args[4] ? parseInt(args[4], 10) : 1;
+  const maxStops = args[5] !== undefined ? parseInt(args[5], 10) : 0;
 
-  console.log(`Found ${results.totalResults} flights\n`);
+  process.stderr.write(`\n🔍 ${origin} → ${destination} | ${outboundDate}${inboundDate ? ' ↔ ' + inboundDate : ' (tek yön)'} | ${adults} yolcu | max ${maxStops} durak\n`);
 
-  results.flights.slice(0, 5).forEach((flight, i) => {
-    console.log(`${i + 1}. ${flight.price.formatted}`);
-    console.log(`   ${flight.legs[0].origin} → ${flight.legs[0].destination}`);
-    console.log(`   ${flight.legs[0].duration}min, ${flight.legs[0].stops} stops`);
-    console.log(`   ${flight.legs[0].segments[0]?.carrier}\n`);
-  });
+  const api = new SkyscannerAPI({ maxStops });
+
+  try {
+    const results = await api.searchFlights({
+      origin,
+      destination,
+      outboundDate,
+      inboundDate,
+      adults,
+      maxStops,
+    });
+
+    // Sadece sonuç JSON'u stdout'a yaz — Python subprocess bunu parse eder
+    process.stdout.write(JSON.stringify(results) + '\n');
+  } catch (err: any) {
+    process.stderr.write(`\n❌ Hata: ${err.message}\n`);
+    process.stdout.write(JSON.stringify({ totalResults: 0, flights: [], error: err.message }) + '\n');
+    process.exit(1);
+  }
 }
