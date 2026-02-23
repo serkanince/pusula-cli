@@ -219,12 +219,15 @@ export class SkyscannerAPI {
   private getEntityId(iataCode: string): string {
     const entities: Record<string, string> = {
       HAM: '95673433', AMS: '95565044', FRA: '95673552', LHR: '95565050',
-      MUC: '95673626', BER: '95673294', DUS: '95673542', CDG: '95565040',
+      MUC: '95673626', BER: '95673383', DUS: '95673542', CDG: '95565040',
       MAD: '95673609', FCO: '95673538', BCN: '95565085', VIE: '95673696',
       ZRH: '95673709', JFK: '95565053', LAX: '95673605', ORD: '95565049',
       SFO: '95673685', MIA: '95673615', DXB: '95673544', SIN: '95673686',
       HKG: '95673573', NRT: '95673639', SYD: '95673690',
       ESB: '128668440',
+      GYD: '95673513', BEG: '95673488', BRU: '95565036', CPH: '95673519',
+      KRK: '95673613', LIS: '95565055', TAS: '95673420', TBS: '95673524',
+      TIA: '128669056', BUD: '95673439',
     };
 
     const entityId = entities[iataCode.toUpperCase()];
