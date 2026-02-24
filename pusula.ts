@@ -220,7 +220,7 @@ export class SkyscannerAPI {
     const entities: Record<string, string> = {
       HAM: '95673433', AMS: '95565044', FRA: '95673552', LHR: '95565050',
       MUC: '95673626', BER: '95673383', DUS: '95673542', CDG: '95565040',
-      MAD: '95673609', FCO: '95673538', BCN: '95565085', VIE: '95673696',
+      MAD: '95565077', FCO: '95673538', BCN: '95565085', VIE: '95673696',
       ZRH: '95673709', JFK: '95565053', LAX: '95673605', ORD: '95565049',
       SFO: '95673685', MIA: '95673615', DXB: '95673544', SIN: '95673686',
       HKG: '95673573', NRT: '95673639', SYD: '95673690',
@@ -328,32 +328,57 @@ export class SkyscannerAPI {
     }
 
     process.stderr.write(`✅ Session: ${sessionId.substring(0, 30)}...\n\n`);
-    return await this.pollResults(sessionId);
+
+    // İlk POST yanıtı zaten complete ise direkt parse et — poll'a gerek yok
+    const initStatus = searchResponse.itineraries?.context?.status;
+    const initResults = searchResponse.itineraries?.results || [];
+    if (initStatus === 'complete' && initResults.length > 0) {
+      process.stderr.write(`⚡ İlk yanıtta sonuçlar hazır (${initResults.length} uçuş) — poll atlanıyor\n\n`);
+      return this.parseResults(searchResponse);
+    }
+
+    return await this.pollResults(sessionId, searchResponse);
   }
 
-  private async pollResults(sessionId: string): Promise<SearchResults> {
+  private async pollResults(sessionId: string, initialResponse?: any): Promise<SearchResults> {
     process.stderr.write('⏳ Sonuçlar bekleniyor...\n\n');
 
     let attempts = 0;
     const maxAttempts = 30;
 
     while (attempts < maxAttempts) {
-      attempts++;
-
-      const response = await this.makeRequest('GET', `/g/radar/api/v2/web-unified-search/${sessionId}`);
+      // İlk iterasyonda beklemeden önce initial response'ı kontrol et
+      const response = attempts === 0 && initialResponse
+        ? initialResponse
+        : await this.makeRequest('GET', `/g/radar/api/v2/web-unified-search/${sessionId}`);
 
       const status = response.context?.status;
+      const itinStatus = response.itineraries?.context?.status;
       const results = response.itineraries?.results || [];
 
-      process.stderr.write(`   Poll #${attempts}: ${status} - ${results.length} uçuş\n`);
-
-      if (status === 'complete') {
-        process.stderr.write('\n✅ Tüm sonuçlar hazır!\n\n');
-        return this.parseResults(response);
+      if (attempts > 0) {
+        process.stderr.write(`   Poll #${attempts}: ${status} - ${results.length} uçuş\n`);
       }
 
-      // complete değilse kısa bekle ve tekrar dene
+      // complete veya complete_not_modified → bitti
+      if (status === 'complete' || itinStatus === 'complete' || itinStatus === 'complete_not_modified') {
+        if (results.length > 0) {
+          process.stderr.write('\n✅ Tüm sonuçlar hazır!\n\n');
+          return this.parseResults(response);
+        } else if (attempts > 0) {
+          // Poll tamamlandı ama sonuç yok — bir kez daha bekleyip dene
+          if (attempts < 3) {
+            await sleep(3000);
+            attempts++;
+            continue;
+          }
+          process.stderr.write('\n✅ Tüm sonuçlar hazır!\n\n');
+          return this.parseResults(response);
+        }
+      }
+
       await sleep(2000);
+      attempts++;
     }
 
     process.stderr.write('\n⚠️  Zaman aşımı, kısmi sonuçlar döndürülüyor\n\n');
