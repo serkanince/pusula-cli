@@ -227,7 +227,7 @@ export class SkyscannerAPI {
       ESB: '128668440',
       GYD: '95673513', BEG: '95673488', BRU: '95565036', CPH: '95673519',
       KRK: '95673613', LIS: '95565055', TAS: '95673420', TBS: '95673524',
-      TIA: '128669056', BUD: '95673439', WAW: '27547454'
+      TIA: '128669056', BUD: '95673439', WAW: '27547454', DLM : '95673892'
     };
 
     const entityId = entities[iataCode.toUpperCase()];
