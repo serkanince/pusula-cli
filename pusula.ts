@@ -237,6 +237,16 @@ export class SkyscannerAPI {
     return entityId;
   }
 
+  private getSupportedEntityCodes(): string[] {
+    // Keep this list aligned with getEntityId mappings.
+    return [
+      'HAM', 'AMS', 'FRA', 'LHR', 'MUC', 'BER', 'DUS', 'CDG', 'MAD', 'FCO',
+      'BCN', 'VIE', 'ZRH', 'JFK', 'LAX', 'ORD', 'SFO', 'MIA', 'DXB', 'SIN',
+      'HKG', 'NRT', 'SYD', 'ESB', 'GYD', 'BEG', 'BRU', 'CPH', 'KRK', 'LIS',
+      'TAS', 'TBS', 'TIA', 'BUD', 'WAW', 'DLM',
+    ];
+  }
+
   private async makeRequest(method: string, path: string, body?: any): Promise<any> {
     const headers: Record<string, string> = {
       accept: 'application/json',
@@ -295,6 +305,21 @@ export class SkyscannerAPI {
 
     const outbound = parseDate(outboundDate);
     const inbound = inboundDate ? parseDate(inboundDate) : null;
+    let originEntityId: string;
+    let destinationEntityId: string;
+
+    try {
+      originEntityId = this.getEntityId(origin);
+      destinationEntityId = this.getEntityId(destination);
+    } catch (error: any) {
+      const supportedCodes = this.getSupportedEntityCodes().join(', ');
+      process.stderr.write(
+        `⚠️  Geçersiz airport/entity kodu: ${error.message}\n` +
+        `   Desteklenen kodlar: ${supportedCodes}\n` +
+        '   → Lütfen IATA kodlarını kontrol edip tekrar deneyin.\n\n'
+      );
+      throw error;
+    }
 
     const requestBody: any = {
       cabinClass: cabinClass.toUpperCase(),
@@ -303,8 +328,8 @@ export class SkyscannerAPI {
       preferDirects: maxStops === 0,
       legs: [
         {
-          legOrigin: { '@type': 'entity', entityId: this.getEntityId(origin) },
-          legDestination: { '@type': 'entity', entityId: this.getEntityId(destination) },
+          legOrigin: { '@type': 'entity', entityId: originEntityId },
+          legDestination: { '@type': 'entity', entityId: destinationEntityId },
           dates: { '@type': 'date', ...outbound },
         },
       ],
@@ -312,8 +337,8 @@ export class SkyscannerAPI {
 
     if (inbound) {
       requestBody.legs.push({
-        legOrigin: { '@type': 'entity', entityId: this.getEntityId(destination) },
-        legDestination: { '@type': 'entity', entityId: this.getEntityId(origin) },
+        legOrigin: { '@type': 'entity', entityId: destinationEntityId },
+        legDestination: { '@type': 'entity', entityId: originEntityId },
         dates: { '@type': 'date', ...inbound },
       });
     }

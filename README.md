@@ -102,6 +102,10 @@ Skyscanner uses a custom **Entity ID** system. The wrapper includes a mapping fo
 - ✅ **Turkey Optimized** - Defaulted to TR market and TRY currency
 - ✅ **TypeScript Native** - Type definitions for all requests/responses
 
+### 🛣️ Planned
+
+- 🚧 **Automatic Cookie Provisioning** - Detect and set required Skyscanner cookies automatically, reducing manual export/setup steps.
+
 ## ⚠️ Important
 
 - **Entity IDs**: Finding the correct `entityId` is more reliable than using just IATA codes for some routes.
@@ -109,3 +113,10 @@ Skyscanner uses a custom **Entity ID** system. The wrapper includes a mapping fo
 - **Rate limiting**: The 30s delay is mandatory to avoid permanent IP bans.
 
 **Built with Bun + TypeScript • Zero Dependencies**
+
+## Disclaimer
+
+This project is provided strictly for educational and research purposes.
+It is an independent, unofficial tool and is not affiliated with, endorsed by, or sponsored by Skyscanner.
+Use it responsibly and ensure your usage complies with all applicable laws, platform terms of service, and rate-limit policies.
+The authors and contributors assume no liability for misuse or for any service disruptions, account restrictions, or other consequences resulting from its use.
