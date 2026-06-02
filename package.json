@@ -2,8 +2,35 @@
   "name": "pusula-cli",
   "version": "1.0.0",
   "description": "High-performance Skyscanner API wrapper for Bun. Optimized with stealth-mode polling and strict flight filtering for terminal enthusiasts.",
-  "main": "pusula.ts",
   "type": "module",
+  "main": "./pusula.ts",
+  "bin": {
+    "pusula": "./pusula.ts"
+  },
+  "files": [
+    "pusula.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serkanince/pusula-cli.git"
+  },
+  "homepage": "https://github.com/serkanince/pusula-cli#readme",
+  "bugs": {
+    "url": "https://github.com/serkanince/pusula-cli/issues"
+  },
+  "keywords": [
+    "cli",
+    "skyscanner",
+    "flight-search",
+    "bun",
+    "typescript"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {},
   "devDependencies": {
     "bun-types": "^1.3.9"
