@@ -6,6 +6,20 @@
 
 High-performance Skyscanner API wrapper for Bun. Optimized with stealth-mode polling and strict flight filtering for terminal enthusiasts.
 
+## 📦 NPM Package
+
+- NPM: [https://www.npmjs.com/package/pusula-cli](https://www.npmjs.com/package/pusula-cli)
+
+## ⚡ Quick Install
+
+```bash
+# Global install
+npm install -g pusula-cli
+
+# Run without installing globally
+npx pusula ESB BCN 2026-04-10 - 1 0
+```
+
 
 
 ## 🚀 Setup
