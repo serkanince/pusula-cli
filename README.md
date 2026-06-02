@@ -118,7 +118,8 @@ Skyscanner uses a custom **Entity ID** system. The wrapper includes a mapping fo
 
 ### 🛣️ Planned
 
-- 🚧 **Automatic Cookie Provisioning** - Detect and set required Skyscanner cookies automatically, reducing manual export/setup steps.
+- 🚧 **Automatic Cookie Setup** - Auto-detect and apply required Skyscanner cookies.
+- 🤝 **Contributions Welcome** - PRs and ideas are greatly appreciated.
 
 ## ⚠️ Important
 
