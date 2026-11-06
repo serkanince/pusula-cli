@@ -166,12 +166,11 @@ export class SkyscannerAPI {
       join(import.meta.dir, 'cookies.txt'),
       // 2. Mevcut çalışma dizini (CWD/cookies.txt)
       join(process.cwd(), 'cookies.txt'),
-      // 3. FlyTracker scraper dizinleri
+      // 3. Üst uygulama / scraper dizinleri
       join(import.meta.dir, '../../scraper/pusula-cli/cookies.txt'),
       join(process.cwd(), 'scraper/pusula-cli/cookies.txt'),
       // 4. Global kullanıcı dizinleri
       homeDir ? join(homeDir, '.pusula', 'cookies.txt') : '',
-      homeDir ? join(homeDir, '.flytracker', 'cookies.txt') : '',
     ].filter(Boolean);
 
     for (const p of candidatePaths) {
@@ -463,12 +462,11 @@ export class SkyscannerAPI {
       }
     }
 
-    // 4. FlyTracker veritabanından dinamik sorgula (supported_destinations)
+    // 4. Harici SQLite veritabanından sorgula (destinations/supported_destinations)
     try {
       const dbPaths = [
-        process.env.FLYTRACKER_DB_PATH,
-        join(import.meta.dir, '../../server/flytracker.db'),
-        join(process.cwd(), 'server/flytracker.db'),
+        process.env.PUSULA_DB_PATH,
+        process.env.DB_PATH,
       ].filter(Boolean) as string[];
 
       for (const dbPath of dbPaths) {

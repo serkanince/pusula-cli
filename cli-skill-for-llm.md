@@ -143,7 +143,7 @@ Agents do not need to hardcode file paths. The client resolves cookies in the fo
 ### C. Cookie Health & 403 Forbidden
 If Skyscanner returns `HTTP 403: Forbidden` or `COOKIE SÜRESİ DOLDU`:
 1. The session tokens (`_px3`, `pxcts`, or `__Secure-session_id`) have expired.
-2. In parent architectures (like FlyTracker), trigger the Camoufox cookie renewal service (`POST /refresh-cookies`) to generate a fresh `cookies.txt` and `user-agent.txt`.
+2. Trigger your automated headless browser/cookie refresher or re-export fresh session cookies from your browser into `cookies.txt`.
 3. Retry the search.
 
 ---
