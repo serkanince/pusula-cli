@@ -1,6 +1,6 @@
 {
   "name": "pusula-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "High-performance Skyscanner API wrapper for Bun. Optimized with stealth-mode polling and strict flight filtering for terminal enthusiasts.",
   "type": "module",
   "main": "./pusula.ts",
@@ -9,6 +9,7 @@
   },
   "files": [
     "pusula.ts",
+    "airports.json",
     "README.md",
     "LICENSE"
   ],
