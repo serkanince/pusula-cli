@@ -24,6 +24,8 @@ export interface SkyscannerConfig {
   currency?: string;
   locale?: string;
   cookieFile?: string;
+  cookies?: Record<string, string> | string;
+  userAgent?: string;
   directOnly?: boolean;
   maxStops?: number;
 }
@@ -123,9 +125,13 @@ export class SkyscannerAPI {
     this.market = options.market || 'TR';
     this.currency = options.currency || 'TRY';
     this.locale = options.locale || 'tr-TR';
-    const cFile = options.cookieFile || './cookies.txt';
-    this.cookies = this.loadCookies(cFile);
-    this.userAgent = this.loadUserAgent(cFile);
+
+    // Cookie ve User-Agent hiyerarşik çözümleme (options > env > akıllı dosya keşfi)
+    const resolvedCookiePath = this.resolveCookiePath(options.cookieFile);
+    this.cookieFilePath = resolvedCookiePath;
+    this.cookies = this.loadCookies(options.cookies, resolvedCookiePath);
+    this.userAgent = this.loadUserAgent(options.userAgent, resolvedCookiePath);
+
     this.travellerContext = this.cookies['traveller_context'] || generateUUID();
     this.viewId = generateUUID();
     this.deviceGuid = this.cookies['device_guid'] || generateUUID();
@@ -139,38 +145,130 @@ export class SkyscannerAPI {
   public staticAirports: Record<string, string | AirportInfo> = {};
   private entityCache: Map<string, string> = new Map();
   private airportsFilePath: string | null = null;
+  public cookieFilePath: string | null = null;
 
-  private loadUserAgent(cookieFilePath: string): string {
-    const defaultUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
-    try {
-      const dir = dirname(cookieFilePath);
-      const uaFile = join(dir, 'user-agent.txt');
+  /**
+   * Çerez dosyasının konumunu çalışma dizinine bağımlı kalmadan otomatik keşfeder.
+   */
+  private resolveCookiePath(explicitPath?: string): string | null {
+    if (explicitPath && existsSync(explicitPath)) {
+      return explicitPath;
+    }
+
+    const envPath = process.env.PUSULA_COOKIE_FILE || process.env.SKYSCANNER_COOKIE_FILE;
+    if (envPath && existsSync(envPath)) {
+      return envPath;
+    }
+
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+    const candidatePaths = [
+      // 1. Script dosyasının kendi dizini (pusula-cli/cookies.txt)
+      join(import.meta.dir, 'cookies.txt'),
+      // 2. Mevcut çalışma dizini (CWD/cookies.txt)
+      join(process.cwd(), 'cookies.txt'),
+      // 3. FlyTracker scraper dizinleri
+      join(import.meta.dir, '../../scraper/pusula-cli/cookies.txt'),
+      join(process.cwd(), 'scraper/pusula-cli/cookies.txt'),
+      // 4. Global kullanıcı dizinleri
+      homeDir ? join(homeDir, '.pusula', 'cookies.txt') : '',
+      homeDir ? join(homeDir, '.flytracker', 'cookies.txt') : '',
+    ].filter(Boolean);
+
+    for (const p of candidatePaths) {
+      if (existsSync(p)) {
+        return p;
+      }
+    }
+    return explicitPath || null;
+  }
+
+  /**
+   * User-Agent çözümleme: options > env > user-agent.txt > varsayılan Chrome UA
+   */
+  private loadUserAgent(explicitUA?: string, cookieFilePath?: string | null): string {
+    const defaultUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+    if (explicitUA && explicitUA.trim()) {
+      return explicitUA.trim();
+    }
+
+    const envUA = process.env.PUSULA_USER_AGENT || process.env.SKYSCANNER_USER_AGENT;
+    if (envUA && envUA.trim()) {
+      return envUA.trim();
+    }
+
+    const candidateUAFiles = [
+      cookieFilePath ? join(dirname(cookieFilePath), 'user-agent.txt') : '',
+      join(import.meta.dir, 'user-agent.txt'),
+      join(process.cwd(), 'user-agent.txt'),
+      join(import.meta.dir, '../../scraper/pusula-cli/user-agent.txt'),
+    ].filter(Boolean);
+
+    for (const uaFile of candidateUAFiles) {
       if (existsSync(uaFile)) {
-        const ua = readFileSync(uaFile, 'utf8').trim();
-        if (ua) {
-          return ua;
+        try {
+          const ua = readFileSync(uaFile, 'utf8').trim();
+          if (ua) return ua;
+        } catch {
+          // ignore
         }
       }
-    } catch (e) {
-      // ignore
     }
     return defaultUA;
   }
 
-  private loadCookies(cookieFile: string): Record<string, string> {
-    try {
-      const content = readFileSync(cookieFile, 'utf8').trim();
-      const cookies: Record<string, string> = {};
+  /**
+   * Çerezleri yükler (options nesnesi > env string > dosya)
+   */
+  private loadCookies(cookiesOption?: Record<string, string> | string, filePath?: string | null): Record<string, string> {
+    // 1. Doğrudan options.cookies olarak Record nesnesi verilmişse
+    if (cookiesOption && typeof cookiesOption === 'object' && !Array.isArray(cookiesOption)) {
+      process.stderr.write(`✅ ${Object.keys(cookiesOption).length} cookies doğrudan options nesnesinden yüklendi\n`);
+      return { ...cookiesOption };
+    }
 
-      if (!content) return {};
+    // 2. Doğrudan options.cookies olarak string (JSON, Netscape veya Cookie header) verilmişse
+    if (typeof cookiesOption === 'string' && cookiesOption.trim()) {
+      const parsed = this.parseCookieString(cookiesOption.trim(), 'options.cookies');
+      if (Object.keys(parsed).length > 0) return parsed;
+    }
 
-      // Handle JSON format (often exported from Chrome extensions)
-      if (content.startsWith('[') || content.startsWith('{')) {
-        try {
-          const json = JSON.parse(content);
-          const cookieArray = Array.isArray(json) ? json : [json];
+    // 3. Ortam değişkeninden oku (PUSULA_COOKIES veya SKYSCANNER_COOKIES)
+    const envCookies = process.env.PUSULA_COOKIES || process.env.SKYSCANNER_COOKIES;
+    if (envCookies && envCookies.trim()) {
+      const parsed = this.parseCookieString(envCookies.trim(), 'ortam değişkeni (PUSULA_COOKIES)');
+      if (Object.keys(parsed).length > 0) return parsed;
+    }
 
-          cookieArray.forEach((c: any) => {
+    // 4. Çözümlenmiş dosya yolundan oku
+    if (filePath && existsSync(filePath)) {
+      try {
+        const content = readFileSync(filePath, 'utf8').trim();
+        if (content) {
+          const parsed = this.parseCookieString(content, filePath);
+          return parsed;
+        }
+      } catch (err: any) {
+        process.stderr.write(`⚠️  Cookie dosyası okunamadı (${filePath}): ${err.message}\n`);
+      }
+    }
+
+    process.stderr.write('⚠️  Geçerli bir cookie kaynağı bulunamadı (options, env veya cookies.txt)\n');
+    return {};
+  }
+
+  /**
+   * JSON, Netscape veya HTTP 'Cookie: key=val;' formatlarını akıllıca parse eder.
+   */
+  private parseCookieString(content: string, sourceLabel: string): Record<string, string> {
+    const cookies: Record<string, string> = {};
+
+    // A. JSON formatı ([{ name, value, expirationDate }] veya { name: value })
+    if (content.startsWith('[') || content.startsWith('{')) {
+      try {
+        const json = JSON.parse(content);
+        if (Array.isArray(json)) {
+          json.forEach((c: any) => {
             if (c.name && c.value) {
               cookies[c.name] = c.value;
               if (c.expirationDate) {
@@ -178,36 +276,63 @@ export class SkyscannerAPI {
               }
             }
           });
-
-          process.stderr.write(`\u2705 ${Object.keys(cookies).length} cookies JSON'dan y\u00fcklendi\n`);
-          return cookies;
-        } catch (e) {
-          // If JSON parse fails, maybe it's actually Netscape format even if it looks like JSON
+        } else if (typeof json === 'object' && json !== null) {
+          Object.entries(json).forEach(([k, v]) => {
+            if (typeof v === 'string') cookies[k] = v;
+            else if (v && typeof v === 'object' && (v as any).value) cookies[k] = (v as any).value;
+          });
         }
+        if (Object.keys(cookies).length > 0) {
+          process.stderr.write(`✅ ${Object.keys(cookies).length} cookies JSON formatında ${sourceLabel} üzerinden yüklendi\n`);
+          return cookies;
+        }
+      } catch {
+        // Parse hatası olursa Netscape denemesine devam et
       }
+    }
 
-      // Handle Netscape format (tab-separated)
-      // Columns: domain, flag, path, secure, expiry(unix), name, value
+    // B. Netscape formatı (tab-separated)
+    if (content.includes('\t')) {
       content.split('\n').forEach((line: string) => {
         if (line.startsWith('#') || !line.trim()) return;
         const parts = line.split('\t');
         if (parts.length >= 7) {
           const name = parts[5];
-          const value = parts[6];
+          const value = parts[6]?.trim();
           const expiry = parseInt(parts[4], 10);
-          cookies[name] = value;
-          if (!isNaN(expiry) && expiry > 0) {
-            this.cookieExpiry[name] = expiry;
+          if (name && value) {
+            cookies[name] = value;
+            if (!isNaN(expiry) && expiry > 0) {
+              this.cookieExpiry[name] = expiry;
+            }
           }
         }
       });
-
-      process.stderr.write(`\u2705 ${Object.keys(cookies).length} cookies Netscape format\u0131ndan y\u00fcklendi\n`);
-      return cookies;
-    } catch (error) {
-      process.stderr.write('\u26a0\ufe0f  Cookie dosyas\u0131 bulunamad\u0131 veya okunamad\u0131\n');
-      return {};
+      if (Object.keys(cookies).length > 0) {
+        process.stderr.write(`✅ ${Object.keys(cookies).length} cookies Netscape formatında ${sourceLabel} üzerinden yüklendi\n`);
+        return cookies;
+      }
     }
+
+    // C. Standart HTTP Cookie başlığı formatı (name1=val1; name2=val2)
+    if (content.includes('=')) {
+      content.split(';').forEach((pair: string) => {
+        const idx = pair.indexOf('=');
+        if (idx > 0) {
+          const name = pair.substring(0, idx).trim();
+          const value = pair.substring(idx + 1).trim();
+          if (name && value) {
+            cookies[name] = value;
+          }
+        }
+      });
+      if (Object.keys(cookies).length > 0) {
+        process.stderr.write(`✅ ${Object.keys(cookies).length} cookies Header formatında ${sourceLabel} üzerinden yüklendi\n`);
+        return cookies;
+      }
+    }
+
+    return cookies;
   }
 
   private checkCookieExpiry(): void {
@@ -597,7 +722,23 @@ export class SkyscannerAPI {
 // ============================================================================
 
 if (import.meta.main) {
-  const args = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+
+  // Flag'leri ayrıştır (--cookie <path>, --cookies <str>)
+  let cookieFileArg: string | undefined;
+  let cookiesArg: string | undefined;
+  const args: string[] = [];
+
+  for (let i = 0; i < rawArgs.length; i++) {
+    const a = rawArgs[i];
+    if (a === '--cookie' || a === '-c') {
+      cookieFileArg = rawArgs[++i];
+    } else if (a === '--cookies') {
+      cookiesArg = rawArgs[++i];
+    } else {
+      args.push(a);
+    }
+  }
 
   // Havalimanı / entityId sorgulama modu:
   // bun run pusula.ts --lookup ADB
@@ -607,7 +748,7 @@ if (import.meta.main) {
       process.stderr.write('Kullanım: bun run pusula.ts --lookup <IATA>\n');
       process.exit(1);
     }
-    const api = new SkyscannerAPI();
+    const api = new SkyscannerAPI({ cookieFile: cookieFileArg, cookies: cookiesArg });
     try {
       const entityId = await api.getEntityId(code);
       const details = (api as any).staticAirports[code.toUpperCase()];
@@ -632,7 +773,7 @@ if (import.meta.main) {
 
   process.stderr.write(`\n🔍 ${origin} → ${destination} | ${outboundDate}${inboundDate ? ' ↔ ' + inboundDate : ' (tek yön)'} | ${adults} yolcu | max ${maxStops} durak\n`);
 
-  const api = new SkyscannerAPI({ maxStops });
+  const api = new SkyscannerAPI({ maxStops, cookieFile: cookieFileArg, cookies: cookiesArg });
 
   try {
     const results = await api.searchFlights({
