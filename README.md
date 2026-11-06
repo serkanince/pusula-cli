@@ -90,17 +90,29 @@ new SkyscannerAPI({
 
 ## 🌍 Supported Airports (Entity IDs)
 
-Skyscanner uses a custom **Entity ID** system. The wrapper includes a mapping for common airports. 
+Skyscanner uses a custom **Entity ID** system. The wrapper includes a rich mapping of popular airports in [airports.json](file:///Users/serkan/Repo/pusula-cli/airports.json) (90+ airports including Turkish hubs, Europe, America, Asia).
 
 | IATA | Airport Name | Entity ID |
 |------|--------------|-----------|
+| **IST** | İstanbul | `95673323` |
+| **SAW** | Sabiha Gökçen | `95673324` |
 | **ESB** | Ankara | `128668440` |
+| **ADB** | İzmir | `95673399` |
+| **AYT** | Antalya | `95673612` |
 | **BCN** | Barcelona | `95565085` |
-| HAM | Hamburg | `95673433` |
-| AMS | Amsterdam | `95565044` |
+| **LHR** | Londra Heathrow | `95565050` |
 | ... | ... | ... |
 
-*To add more: Search for the flight on the website and check the `web-unified-search` request body to find the exact `entityId`.*
+### 🚀 Dynamic Autosuggest Fallback
+If an airport is not in [airports.json](file:///Users/serkan/Repo/pusula-cli/airports.json) or the database:
+1. `pusula.ts` automatically queries Skyscanner's internal Autosuggest API on-the-fly (`/g/autosuggest-flights/v1.0/{locale}/{IATA}/`).
+2. Extracts the exact `GeoId`.
+3. Auto-appends the new airport to [airports.json](file:///Users/serkan/Repo/pusula-cli/airports.json) so subsequent queries are instant.
+
+You can also look up or pre-populate any airport directly from the CLI:
+```bash
+bun run pusula.ts --lookup TZX
+```
 
 ## 🔍 How It Works (Human-Like Mode)
 

@@ -4,11 +4,20 @@
  * Optimized for Bun - uses native APIs for maximum performance
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { Database } from 'bun:sqlite';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export interface AirportInfo {
+  entityId: string;
+  name?: string;
+  city?: string;
+  country?: string;
+}
 
 export interface SkyscannerConfig {
   market?: string;
@@ -84,6 +93,12 @@ function parseDate(dateString: string): { year: string; month: string; day: stri
   };
 }
 
+// Tek bir HTTP isteğinin zaman aşımı — yanıt vermeyen bağlantı subprocess'i kilitlemesin.
+const REQUEST_TIMEOUT_MS = 15_000;
+// Poll döngüsünün toplam süre sınırı (deneme sayısından bağımsız). Python subprocess
+// timeout'u (120 sn) en kötü durumdan (15 + 60 + 18 + 15 ≈ 108 sn) büyük kalmalı.
+const POLL_DEADLINE_MS = 60_000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -101,22 +116,46 @@ export class SkyscannerAPI {
   private travellerContext: string;
   private viewId: string;
   private deviceGuid: string;
+  private userAgent: string;
 
   constructor(options: SkyscannerConfig = {}) {
     this.baseURL = 'https://www.skyscanner.com.tr';
     this.market = options.market || 'TR';
     this.currency = options.currency || 'TRY';
     this.locale = options.locale || 'tr-TR';
-    this.cookies = this.loadCookies(options.cookieFile || './cookies.txt');
+    const cFile = options.cookieFile || './cookies.txt';
+    this.cookies = this.loadCookies(cFile);
+    this.userAgent = this.loadUserAgent(cFile);
     this.travellerContext = this.cookies['traveller_context'] || generateUUID();
     this.viewId = generateUUID();
     this.deviceGuid = this.cookies['device_guid'] || generateUUID();
-    this.maxStops = options.maxStops ?? (options.directOnly ? 0 : 99);
+    this.maxStops = options.maxStops ?? (options.directOnly ? 0 : 1);
     this.checkCookieExpiry();
+    this.loadAirports();
   }
 
   private maxStops: number = 99;
   private cookieExpiry: Record<string, number> = {};  // name → Unix timestamp (0 = no expiry)
+  public staticAirports: Record<string, string | AirportInfo> = {};
+  private entityCache: Map<string, string> = new Map();
+  private airportsFilePath: string | null = null;
+
+  private loadUserAgent(cookieFilePath: string): string {
+    const defaultUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
+    try {
+      const dir = dirname(cookieFilePath);
+      const uaFile = join(dir, 'user-agent.txt');
+      if (existsSync(uaFile)) {
+        const ua = readFileSync(uaFile, 'utf8').trim();
+        if (ua) {
+          return ua;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return defaultUA;
+  }
 
   private loadCookies(cookieFile: string): Record<string, string> {
     try {
@@ -216,36 +255,128 @@ export class SkyscannerAPI {
       .join('; ');
   }
 
-  private getEntityId(iataCode: string): string {
-    const entities: Record<string, string> = {
-      HAM: '95673433', AMS: '95565044', FRA: '95673552', LHR: '95565050',
-      MUC: '95673626', BER: '95673383', DUS: '95673542', CDG: '95565040',
-      MAD: '95565077', FCO: '95673538', BCN: '95565085', VIE: '95673696',
-      ZRH: '95673709', JFK: '95565053', LAX: '95673605', ORD: '95565049',
-      SFO: '95673685', MIA: '95673615', DXB: '95673544', SIN: '95673686',
-      HKG: '95673573', NRT: '95673639', SYD: '95673690',
-      ESB: '128668440',
-      GYD: '95673513', BEG: '95673488', BRU: '95565036', CPH: '95673519',
-      KRK: '95673613', LIS: '95565055', TAS: '95673420', TBS: '95673524',
-      TIA: '128669056', BUD: '95673439', WAW: '27547454', DLM: '95673892',
-      ALA: '114115878', NQZ: '204208357', BSZ: '224603324',
-    };
+  private loadAirports(): void {
+    const candidatePaths = [
+      join(import.meta.dir, 'airports.json'),
+      join(process.cwd(), 'airports.json'),
+      join(import.meta.dir, '../../server/airports.json'),
+    ];
 
-    const entityId = entities[iataCode.toUpperCase()];
-    if (!entityId) {
-      throw new Error(`Unknown airport: ${iataCode}. Supported: ${Object.keys(entities).join(', ')}`);
+    for (const p of candidatePaths) {
+      if (existsSync(p)) {
+        try {
+          const content = readFileSync(p, 'utf8');
+          this.staticAirports = JSON.parse(content);
+          this.airportsFilePath = p;
+          process.stderr.write(`✅ ${Object.keys(this.staticAirports).length} havalimanı airports.json dosyasından yüklendi\n`);
+          return;
+        } catch {
+          // ignore error
+        }
+      }
     }
-    return entityId;
   }
 
-  private getSupportedEntityCodes(): string[] {
-    // Keep this list aligned with getEntityId mappings.
-    return [
-      'HAM', 'AMS', 'FRA', 'LHR', 'MUC', 'BER', 'DUS', 'CDG', 'MAD', 'FCO',
-      'BCN', 'VIE', 'ZRH', 'JFK', 'LAX', 'ORD', 'SFO', 'MIA', 'DXB', 'SIN',
-      'HKG', 'NRT', 'SYD', 'ESB', 'GYD', 'BEG', 'BRU', 'CPH', 'KRK', 'LIS',
-      'TAS', 'TBS', 'TIA', 'BUD', 'WAW', 'DLM', 'ALA', 'NQZ', 'BSZ',
-    ];
+  private persistAirport(code: string, info: AirportInfo): void {
+    try {
+      this.staticAirports[code] = info;
+      const targetPath = this.airportsFilePath || join(import.meta.dir, 'airports.json');
+      writeFileSync(targetPath, JSON.stringify(this.staticAirports, null, 2) + '\n', 'utf8');
+    } catch {
+      // ignore write errors
+    }
+  }
+
+  public async fetchEntityFromAutosuggest(iataCode: string): Promise<AirportInfo | null> {
+    const code = iataCode.trim().toUpperCase();
+    try {
+      const path = `/g/autosuggest-flights/v1.0/${this.locale}/${encodeURIComponent(code)}/`;
+      const data = await this.makeRequest('GET', path);
+      if (Array.isArray(data) && data.length > 0) {
+        // Öncelik: PlaceId tam eşleşen veya GeoId/GeoContainerId içeren sonuç
+        const exact = data.find((d: any) => String(d.PlaceId || '').toUpperCase() === code);
+        const match = exact || data.find((d: any) => d.GeoId || d.GeoContainerId) || data[0];
+        const rawId = match?.GeoId || match?.GeoContainerId;
+        if (rawId) {
+          const info: AirportInfo = {
+            entityId: String(rawId),
+            name: match.PlaceName || match.PlaceNameEn || code,
+            city: match.CityName || '',
+            country: match.CountryName || '',
+          };
+          this.entityCache.set(code, info.entityId);
+          this.persistAirport(code, info);
+          return info;
+        }
+      }
+    } catch (err: any) {
+      process.stderr.write(`⚠️  [${code}] Autosuggest sorgusu başarısız: ${err.message}\n`);
+    }
+    return null;
+  }
+
+  public async getEntityId(iataCode: string): Promise<string> {
+    const code = iataCode.trim().toUpperCase();
+
+    // 1. Doğrudan Skyscanner entityId verilmişse (tamamen sayısal)
+    if (/^\d+$/.test(code)) {
+      return code;
+    }
+
+    // 2. Bellek önbelleğinde varsa
+    if (this.entityCache.has(code)) {
+      return this.entityCache.get(code)!;
+    }
+
+    // 3. Statik airports.json dosyasından kontrol et
+    const staticEntry = this.staticAirports[code];
+    if (staticEntry) {
+      const id = typeof staticEntry === 'string' ? staticEntry : staticEntry.entityId;
+      if (id) {
+        this.entityCache.set(code, String(id));
+        return String(id);
+      }
+    }
+
+    // 4. FlyTracker veritabanından dinamik sorgula (supported_destinations)
+    try {
+      const dbPaths = [
+        process.env.FLYTRACKER_DB_PATH,
+        join(import.meta.dir, '../../server/flytracker.db'),
+        join(process.cwd(), 'server/flytracker.db'),
+      ].filter(Boolean) as string[];
+
+      for (const dbPath of dbPaths) {
+        if (existsSync(dbPath)) {
+          const db = new Database(dbPath, { readonly: true });
+          try {
+            const row = db.query<{ entity_id: string }, [string]>(
+              'SELECT entity_id FROM supported_destinations WHERE UPPER(code) = ? AND entity_id IS NOT NULL'
+            ).get(code);
+            if (row && row.entity_id) {
+              const id = String(row.entity_id);
+              this.entityCache.set(code, id);
+              return id;
+            }
+          } finally {
+            db.close();
+          }
+          break;
+        }
+      }
+    } catch {
+      // DB okunamazsa devam et
+    }
+
+    // 5. Dinamik Autosuggest Fallback: Skyscanner API'den canlı sorgula
+    process.stderr.write(`ℹ️  [${code}] Statik haritada bulunamadı, Skyscanner Autosuggest üzerinden dinamik aranıyor...\n`);
+    const resolved = await this.fetchEntityFromAutosuggest(code);
+    if (resolved && resolved.entityId) {
+      process.stderr.write(`✅ [${code}] Dinamik olarak bulundu -> EntityId: ${resolved.entityId} (${resolved.name || ''})\n`);
+      return resolved.entityId;
+    }
+
+    throw new Error(`Bilinmeyen havalimanı: ${iataCode}. Ne statik dosyada ne de Skyscanner Autosuggest servisinde bulunamadı.`);
   }
 
   private async makeRequest(method: string, path: string, body?: any): Promise<any> {
@@ -256,7 +387,7 @@ export class SkyscannerAPI {
       cookie: this.formatCookies(),
       origin: this.baseURL,
       referer: this.baseURL,
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      'user-agent': this.userAgent,
       'x-skyscanner-channelid': 'website',
       'x-skyscanner-currency': this.currency,
       'x-skyscanner-locale': this.locale,
@@ -269,6 +400,7 @@ export class SkyscannerAPI {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     };
 
     const response = await fetch(`${this.baseURL}${path}`, options);
@@ -293,7 +425,7 @@ export class SkyscannerAPI {
       inboundDate,
       adults = 1,
       cabinClass = 'ECONOMY',
-      maxStops = 0
+      maxStops = params.maxStops !== undefined ? params.maxStops : this.maxStops
     } = params;
 
     if (!origin || !destination || !outboundDate) {
@@ -306,21 +438,9 @@ export class SkyscannerAPI {
 
     const outbound = parseDate(outboundDate);
     const inbound = inboundDate ? parseDate(inboundDate) : null;
-    let originEntityId: string;
-    let destinationEntityId: string;
 
-    try {
-      originEntityId = this.getEntityId(origin);
-      destinationEntityId = this.getEntityId(destination);
-    } catch (error: any) {
-      const supportedCodes = this.getSupportedEntityCodes().join(', ');
-      process.stderr.write(
-        `⚠️  Geçersiz airport/entity kodu: ${error.message}\n` +
-        `   Desteklenen kodlar: ${supportedCodes}\n` +
-        '   → Lütfen IATA kodlarını kontrol edip tekrar deneyin.\n\n'
-      );
-      throw error;
-    }
+    const originEntityId = await this.getEntityId(origin);
+    const destinationEntityId = await this.getEntityId(destination);
 
     const requestBody: any = {
       cabinClass: cabinClass.toUpperCase(),
@@ -371,8 +491,9 @@ export class SkyscannerAPI {
 
     let attempts = 0;
     const maxAttempts = 30;
+    const deadline = Date.now() + POLL_DEADLINE_MS;
 
-    while (attempts < maxAttempts) {
+    while (attempts < maxAttempts && Date.now() < deadline) {
       // İlk iterasyonda beklemeden önce initial response'ı kontrol et
       const response = attempts === 0 && initialResponse
         ? initialResponse
@@ -426,29 +547,42 @@ export class SkyscannerAPI {
             formatted: item.price?.formatted || 'N/A',
             currency: this.currency,
           },
-          legs: (item.legs || []).map((leg: any) => ({
-            origin: leg.origin?.displayCode || 'Unknown',
-            destination: leg.destination?.displayCode || 'Unknown',
-            departure: leg.departure || '',
-            arrival: leg.arrival || '',
-            duration: leg.durationInMinutes || 0,
-            stops: leg.stopCount || 0,
-            segments: (leg.segments || []).map((seg: any) => ({
-              origin: seg.origin?.displayCode || 'Unknown',
-              destination: seg.destination?.displayCode || 'Unknown',
-              departure: seg.departure || '',
-              arrival: seg.arrival || '',
-              carrier: seg.marketingCarrier?.name || 'Unknown',
-              carrierCode: seg.marketingCarrier?.alternateId || '',
-              flightNumber: seg.flightNumber || '',
-              duration: seg.durationInMinutes || 0,
-            })),
-          })),
+          legs: (item.legs || []).map((leg: any) => {
+            const segs = leg.segments || [];
+            const segStops = segs.length > 0 ? segs.length - 1 : 0;
+            const apiStops = typeof leg.stopCount === 'number' ? leg.stopCount : (typeof leg.stops === 'number' ? leg.stops : 0);
+            const calculatedStops = Math.max(segStops, apiStops);
+
+            return {
+              origin: leg.origin?.displayCode || 'Unknown',
+              destination: leg.destination?.displayCode || 'Unknown',
+              departure: leg.departure || '',
+              arrival: leg.arrival || '',
+              duration: leg.durationInMinutes || 0,
+              stops: calculatedStops,
+              segments: segs.map((seg: any) => ({
+                origin: seg.origin?.displayCode || 'Unknown',
+                destination: seg.destination?.displayCode || 'Unknown',
+                departure: seg.departure || '',
+                arrival: seg.arrival || '',
+                carrier: seg.marketingCarrier?.name || 'Unknown',
+                carrierCode: seg.marketingCarrier?.alternateId || '',
+                flightNumber: seg.flightNumber || '',
+                duration: seg.durationInMinutes || 0,
+              })),
+            };
+          }),
           deeplink: item.deeplink?.url || null,
         };
       })
       .filter((flight: Flight | null): flight is Flight => flight !== null)
-      .filter((flight: Flight) => flight.legs.every((leg: any) => leg.stops <= this.maxStops));
+      .filter((flight: Flight) => flight.legs.every((leg: any) => {
+        const segCount = Array.isArray(leg.segments) ? leg.segments.length : 0;
+        const stops = typeof leg.stops === 'number'
+          ? Math.max(leg.stops, segCount > 0 ? segCount - 1 : 0)
+          : (segCount > 0 ? segCount - 1 : 0);
+        return stops <= this.maxStops;
+      }));
 
     return {
       totalResults: flights.length,
@@ -463,9 +597,31 @@ export class SkyscannerAPI {
 // ============================================================================
 
 if (import.meta.main) {
+  const args = process.argv.slice(2);
+
+  // Havalimanı / entityId sorgulama modu:
+  // bun run pusula.ts --lookup ADB
+  if (args[0] === '--lookup' || args[0] === '-l') {
+    const code = args[1];
+    if (!code) {
+      process.stderr.write('Kullanım: bun run pusula.ts --lookup <IATA>\n');
+      process.exit(1);
+    }
+    const api = new SkyscannerAPI();
+    try {
+      const entityId = await api.getEntityId(code);
+      const details = (api as any).staticAirports[code.toUpperCase()];
+      process.stdout.write(JSON.stringify({ code: code.toUpperCase(), entityId, details: details || null }, null, 2) + '\n');
+      process.exit(0);
+    } catch (e: any) {
+      process.stderr.write(`❌ ${e.message}\n`);
+      process.stdout.write(JSON.stringify({ error: e.message }) + '\n');
+      process.exit(1);
+    }
+  }
+
   // Args: origin destination outboundDate [inboundDate] [adults] [maxStops]
   // Example: bun run pusula.ts ESB BCN 2026-04-10 - 1 0
-  const args = process.argv.slice(2);
 
   const origin = args[0] || 'ESB';
   const destination = args[1] || 'BCN';

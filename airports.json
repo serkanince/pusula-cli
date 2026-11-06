@@ -1,0 +1,554 @@
+{
+  "ADA": {
+    "entityId": "220266826",
+    "name": "Çukurova Uluslararası (Adana/Mersin)",
+    "city": "Adana / Mersin",
+    "country": "Türkiye"
+  },
+  "ADB": {
+    "entityId": "95673399",
+    "name": "İzmir",
+    "city": "İzmir",
+    "country": "Türkiye"
+  },
+  "AGP": {
+    "entityId": "95565095",
+    "name": "Málaga",
+    "city": "Málaga",
+    "country": "İspanya"
+  },
+  "ALA": {
+    "entityId": "114115878",
+    "name": "Almatı",
+    "city": "Almatı",
+    "country": "Kazakistan"
+  },
+  "AMS": {
+    "entityId": "95565044",
+    "name": "Amsterdam Schiphol",
+    "city": "Amsterdam",
+    "country": "Hollanda"
+  },
+  "ARN": {
+    "entityId": "95673495",
+    "name": "Stokholm Arlanda",
+    "city": "Stockholm",
+    "country": "İsveç"
+  },
+  "ASB": {
+    "entityId": "95673625",
+    "name": "Aşkabat",
+    "city": "Aşkabat",
+    "country": "Türkmenistan"
+  },
+  "ASR": {
+    "entityId": "128668257",
+    "name": "Kayseri",
+    "city": "Kayseri",
+    "country": "Türkiye"
+  },
+  "ATH": {
+    "entityId": "95673624",
+    "name": "Atina Uluslararası",
+    "city": "Atina",
+    "country": "Yunanistan"
+  },
+  "AUH": {
+    "entityId": "95673509",
+    "name": "Zayed Uluslararası",
+    "city": "Abu Dabi",
+    "country": "Birleşik Arap Emirlikleri"
+  },
+  "AYT": {
+    "entityId": "95673612",
+    "name": "Antalya",
+    "city": "Antalya",
+    "country": "Türkiye"
+  },
+  "BCN": {
+    "entityId": "95565085",
+    "name": "Barselona",
+    "city": "Barselona",
+    "country": "İspanya"
+  },
+  "BEG": {
+    "entityId": "95673488",
+    "name": "Belgrad Nikola Tesla",
+    "city": "Belgrad",
+    "country": "Sırbistan"
+  },
+  "BER": {
+    "entityId": "95673383",
+    "name": "Berlin Brandenburg",
+    "city": "Berlin",
+    "country": "Almanya"
+  },
+  "BGY": {
+    "entityId": "95565071",
+    "name": "Milano Bergamo",
+    "city": "Milano",
+    "country": "İtalya"
+  },
+  "BJV": {
+    "entityId": "95673401",
+    "name": "Milas-Bodrum",
+    "city": "Bodrum",
+    "country": "Türkiye"
+  },
+  "BKK": {
+    "entityId": "95673349",
+    "name": "Bangkok Suvarnabhumi",
+    "city": "Bangkok",
+    "country": "Tayland"
+  },
+  "BRU": {
+    "entityId": "95565036",
+    "name": "Bruxelles International",
+    "city": "Brüksel",
+    "country": "Belçika"
+  },
+  "BSZ": {
+    "entityId": "224603324",
+    "name": "Bişkek",
+    "city": "Bişkek",
+    "country": "Kırgızistan"
+  },
+  "BUD": {
+    "entityId": "95673439",
+    "name": "Budapeşte",
+    "city": "Budapeşte",
+    "country": "Macaristan"
+  },
+  "BVA": {
+    "entityId": "95566278",
+    "name": "Paris Beauvais",
+    "city": "Paris",
+    "country": "Fransa"
+  },
+  "CDG": {
+    "entityId": "95565041",
+    "name": "Paris Charles-de-Gaulle",
+    "city": "Paris",
+    "country": "Fransa"
+  },
+  "CGN": {
+    "entityId": "95673544",
+    "name": "Köln",
+    "city": "Köln",
+    "country": "Almanya"
+  },
+  "CIA": {
+    "entityId": "95565062",
+    "name": "Roma Ciampino",
+    "city": "Roma",
+    "country": "İtalya"
+  },
+  "COV": {
+    "entityId": "220266826",
+    "name": "Çukurova Uluslararası Havalimanı",
+    "city": "Adana / Mersin",
+    "country": "Türkiye"
+  },
+  "CPH": {
+    "entityId": "95673519",
+    "name": "Kopenhag",
+    "city": "Kopenhag",
+    "country": "Danimarka"
+  },
+  "CRL": {
+    "entityId": "95565038",
+    "name": "Bruxelles S. Charleroi",
+    "city": "Brüksel",
+    "country": "Belçika"
+  },
+  "DIY": {
+    "entityId": "128668443",
+    "name": "Diyarbakır",
+    "city": "Diyarbakır",
+    "country": "Türkiye"
+  },
+  "DLM": {
+    "entityId": "95673892",
+    "name": "Dalaman",
+    "city": "Dalaman",
+    "country": "Türkiye"
+  },
+  "DOH": {
+    "entityId": "95673852",
+    "name": "Hamad International",
+    "city": "Doha",
+    "country": "Katar"
+  },
+  "DUB": {
+    "entityId": "95673529",
+    "name": "Dublin",
+    "city": "Dublin",
+    "country": "İrlanda"
+  },
+  "DUS": {
+    "entityId": "95673545",
+    "name": "Düseldorf Uluslararası",
+    "city": "Düsseldorf",
+    "country": "Almanya"
+  },
+  "DXB": {
+    "entityId": "95673506",
+    "name": "Dubai",
+    "city": "Dubai",
+    "country": "Birleşik Arap Emirlikleri"
+  },
+  "DYU": {
+    "entityId": "95673716",
+    "name": "Duşanbe",
+    "city": "Duşanbe",
+    "country": "Tacikistan"
+  },
+  "ESB": {
+    "entityId": "128668440",
+    "name": "Ankara Esenboğa",
+    "city": "Ankara",
+    "country": "Türkiye"
+  },
+  "EVN": {
+    "entityId": "95673518",
+    "name": "Zvartnots Uluslararası",
+    "city": "Erivan",
+    "country": "Ermenistan"
+  },
+  "EWR": {
+    "entityId": "95565059",
+    "name": "Nueva York Newark",
+    "city": "New York",
+    "country": "Birleşik Devletler"
+  },
+  "EZS": {
+    "entityId": "128668572",
+    "name": "Elazığ",
+    "city": "Elazığ",
+    "country": "Türkiye"
+  },
+  "FCO": {
+    "entityId": "95565065",
+    "name": "Roma Fiumicino",
+    "city": "Roma",
+    "country": "İtalya"
+  },
+  "FRA": {
+    "entityId": "95673652",
+    "name": "Frankfurt",
+    "city": "Frankfurt",
+    "country": "Almanya"
+  },
+  "FRU": {
+    "entityId": "224603324",
+    "name": "Bişkek",
+    "city": "Bişkek",
+    "country": "Kırgızistan"
+  },
+  "GVA": {
+    "entityId": "95674055",
+    "name": "Cenevre",
+    "city": "Cenevre",
+    "country": "İsviçre"
+  },
+  "GYD": {
+    "entityId": "95673513",
+    "name": "Bakü",
+    "city": "Bakü",
+    "country": "Azerbaycan"
+  },
+  "GZT": {
+    "entityId": "128668321",
+    "name": "Gaziantep",
+    "city": "Gaziantep",
+    "country": "Türkiye"
+  },
+  "HAM": {
+    "entityId": "95673433",
+    "name": "Hamburg",
+    "city": "Hamburg",
+    "country": "Almanya"
+  },
+  "HEL": {
+    "entityId": "95673700",
+    "name": "Helsinki Vantaa",
+    "city": "Helsinki",
+    "country": "Finlandiya"
+  },
+  "HKG": {
+    "entityId": "128668132",
+    "name": "Hong Kong Intl",
+    "city": "Hong Kong",
+    "country": "Çin"
+  },
+  "HND": {
+    "entityId": "128667143",
+    "name": "Tokyo Haneda",
+    "city": "Tokyo",
+    "country": "Japonya"
+  },
+  "IBZ": {
+    "entityId": "95565093",
+    "name": "Ibiza",
+    "city": "Ibiza",
+    "country": "İspanya"
+  },
+  "ICN": {
+    "entityId": "95673659",
+    "name": "Seoul Incheon Int'l",
+    "city": "Seul",
+    "country": "Güney Kore"
+  },
+  "IST": {
+    "entityId": "95673323",
+    "name": "İstanbul",
+    "city": "İstanbul",
+    "country": "Türkiye"
+  },
+  "JED": {
+    "entityId": "95673390",
+    "name": "Cidde",
+    "city": "Cidde",
+    "country": "Suudi Arabistan"
+  },
+  "JFK": {
+    "entityId": "95565058",
+    "name": "New York John F Kennedy",
+    "city": "New York",
+    "country": "Birleşik Devletler"
+  },
+  "KRK": {
+    "entityId": "95673613",
+    "name": "Kraków",
+    "city": "Kraków",
+    "country": "Polonya"
+  },
+  "LAX": {
+    "entityId": "95673368",
+    "name": "Los Angeles Uluslararası",
+    "city": "Los Angeles",
+    "country": "Birleşik Devletler"
+  },
+  "LGW": {
+    "entityId": "95565051",
+    "name": "Londra Gatwick",
+    "city": "Londra",
+    "country": "Birleşik Krallık"
+  },
+  "LHR": {
+    "entityId": "95565050",
+    "name": "Londra Heathrow",
+    "city": "Londra",
+    "country": "Birleşik Krallık"
+  },
+  "LIS": {
+    "entityId": "95565055",
+    "name": "Lizbon",
+    "city": "Lizbon",
+    "country": "Portekiz"
+  },
+  "LTN": {
+    "entityId": "95565053",
+    "name": "Londra Luton",
+    "city": "Londra",
+    "country": "Birleşik Krallık"
+  },
+  "MAD": {
+    "entityId": "95565077",
+    "name": "Madrid-Barajas",
+    "city": "Madrid",
+    "country": "İspanya"
+  },
+  "MEL": {
+    "entityId": "95673364",
+    "name": "Melbourne Tullamarine",
+    "city": "Melbourne",
+    "country": "Avustralya"
+  },
+  "MIA": {
+    "entityId": "95673821",
+    "name": "Miami International",
+    "city": "Miami",
+    "country": "Birleşik Devletler"
+  },
+  "MUC": {
+    "entityId": "95673491",
+    "name": "Münih",
+    "city": "Münih",
+    "country": "Almanya"
+  },
+  "MXP": {
+    "entityId": "95565070",
+    "name": "Milano Malpensa",
+    "city": "Milano",
+    "country": "İtalya"
+  },
+  "NQZ": {
+    "entityId": "204208357",
+    "name": "Astana Nursultan Nazarbayev",
+    "city": "Astana",
+    "country": "Kazakistan"
+  },
+  "NRT": {
+    "entityId": "128668889",
+    "name": "Tokyo Narita",
+    "city": "Tokyo",
+    "country": "Japonya"
+  },
+  "OPO": {
+    "entityId": "95566290",
+    "name": "Porto",
+    "city": "Porto",
+    "country": "Portekiz"
+  },
+  "ORD": {
+    "entityId": "95673392",
+    "name": "Chicago O'Hare Uluslararası",
+    "city": "Şikago",
+    "country": "Birleşik Devletler"
+  },
+  "ORY": {
+    "entityId": "95565040",
+    "name": "Paris Orly",
+    "city": "Paris",
+    "country": "Fransa"
+  },
+  "OSL": {
+    "entityId": "128667763",
+    "name": "Oslo Gardermoen",
+    "city": "Oslo",
+    "country": "Norveç"
+  },
+  "PMI": {
+    "entityId": "95565111",
+    "name": "Palma Mayorka",
+    "city": "Palma de Mallorca",
+    "country": "İspanya"
+  },
+  "PRG": {
+    "entityId": "95673502",
+    "name": "Prag",
+    "city": "Prag",
+    "country": "Çekya"
+  },
+  "RMO": {
+    "entityId": "217960351",
+    "name": "RMO",
+    "city": "",
+    "country": ""
+  },
+  "RUH": {
+    "entityId": "95673362",
+    "name": "Riyad",
+    "city": "Riyad",
+    "country": "Suudi Arabistan"
+  },
+  "SAW": {
+    "entityId": "95673324",
+    "name": "İstanbul Sabiha Gökçen",
+    "city": "İstanbul",
+    "country": "Türkiye"
+  },
+  "SFO": {
+    "entityId": "95673577",
+    "name": "San Francisco Uluslararası",
+    "city": "San Francisco",
+    "country": "Birleşik Devletler"
+  },
+  "SIN": {
+    "entityId": "95673375",
+    "name": "Singapore Changi",
+    "city": "Singapur",
+    "country": "Singapur"
+  },
+  "SJJ": {
+    "entityId": "95673641",
+    "name": "Saraybosna",
+    "city": "Saraybosna",
+    "country": "Bosna-Hersek"
+  },
+  "SKG": {
+    "entityId": "95673847",
+    "name": "Selanik",
+    "city": "Selanik",
+    "country": "Yunanistan"
+  },
+  "SKP": {
+    "entityId": "95673755",
+    "name": "Üsküp",
+    "city": "Üsküp",
+    "country": "Kuzey Makedonya"
+  },
+  "STN": {
+    "entityId": "95565052",
+    "name": "Londra Stansted",
+    "city": "Londra",
+    "country": "Birleşik Krallık"
+  },
+  "SYD": {
+    "entityId": "128667058",
+    "name": "Sydney",
+    "city": "Sidney",
+    "country": "Avustralya"
+  },
+  "TAS": {
+    "entityId": "95673420",
+    "name": "Taşkent",
+    "city": "Taşkent",
+    "country": "Özbekistan"
+  },
+  "TBS": {
+    "entityId": "95673524",
+    "name": "Tiflis",
+    "city": "Tiflis",
+    "country": "Gürcistan"
+  },
+  "TIA": {
+    "entityId": "128669056",
+    "name": "Tiran",
+    "city": "Tiran",
+    "country": "Arnavutluk"
+  },
+  "TZX": {
+    "entityId": "128667446",
+    "name": "Trabzon",
+    "city": "Trabzon",
+    "country": "Türkiye"
+  },
+  "VAN": {
+    "entityId": "128667442",
+    "name": "Van",
+    "city": "Van",
+    "country": "Türkiye"
+  },
+  "VIE": {
+    "entityId": "95673444",
+    "name": "Viyana",
+    "city": "Viyana",
+    "country": "Avusturya"
+  },
+  "VLC": {
+    "entityId": "95565090",
+    "name": "Valencia",
+    "city": "Valensiya",
+    "country": "İspanya"
+  },
+  "WAW": {
+    "entityId": "95673438",
+    "name": "Varşova Chopin",
+    "city": "Varşova",
+    "country": "Polonya"
+  },
+  "ZRH": {
+    "entityId": "95673856",
+    "name": "Zürih",
+    "city": "Zürih",
+    "country": "İsviçre"
+  },
+  "KYA": {
+    "entityId": "128668546",
+    "name": "Konya",
+    "city": "Konya",
+    "country": "Türkiye"
+  }
+}
